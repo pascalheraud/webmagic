@@ -430,7 +430,7 @@ public class Spider implements Runnable, Task {
     }
 
     /**
-     * Overridable to allow specific spiders to process the download like connecting
+     * Overridable to allow specific spiders to process the download like connecting to the website
      * @param request
      * @return
      */

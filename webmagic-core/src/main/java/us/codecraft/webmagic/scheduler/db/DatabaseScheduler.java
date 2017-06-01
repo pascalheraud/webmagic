@@ -154,6 +154,42 @@ public class DatabaseScheduler implements Scheduler {
 			}
 		}
 	}
+	
+	public void disable() {
+		Connection cnx = null;
+		try {
+			cnx = dataSource.getConnection();
+			PreparedStatement select = null;
+			try {
+				select = cnx.prepareStatement("update webmagic_schedulercontrol set enabled = false");
+				select.executeUpdate();
+			} finally {
+				closeStatement(select);
+			}
+		} catch (SQLException e) {
+			throw new RuntimeException(e);
+		} finally {
+			closeConnexion(cnx);
+		}
+	}
+	
+	public void enable() {
+		Connection cnx = null;
+		try {
+			cnx = dataSource.getConnection();
+			PreparedStatement select = null;
+			try {
+				select = cnx.prepareStatement("update webmagic_schedulercontrol set enabled = true");
+				select.executeUpdate();
+			} finally {
+				closeStatement(select);
+			}
+		} catch (SQLException e) {
+			throw new RuntimeException(e);
+		} finally {
+			closeConnexion(cnx);
+		}
+	}
 
 	public void setNotRunning() {
 		Connection cnx = null;
@@ -184,8 +220,7 @@ public class DatabaseScheduler implements Scheduler {
 				try {
 					rs = select.executeQuery();
 					rs.next();
-					boolean enabled = rs.getBoolean("enabled");
-					return enabled;
+					return rs.getBoolean("enabled");
 				} finally {
 					closeResultSet(rs);
 				}

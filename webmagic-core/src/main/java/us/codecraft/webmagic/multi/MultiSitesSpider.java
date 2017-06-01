@@ -32,7 +32,7 @@ import us.codecraft.webmagic.Spider;
 import us.codecraft.webmagic.processor.PageProcessor;
 
 /**
- * A Spider that can handle multi sites at once. Reading user agents
+ * A Spider that can handle multi sites at once. Reads robots.txt and follow rules.
  * 
  * @author pascal
  *
@@ -40,6 +40,10 @@ import us.codecraft.webmagic.processor.PageProcessor;
 public class MultiSitesSpider extends Spider {
 
 	public static final String FOLLOW_EXTRA = "follow";
+	public static final String FOLLOW_COUNT_EXTRA = "followCount";
+
+	// Extra information to allow the spider to follow sitemap and read its contents (false by default)
+	public static final String FOLLOW_SITEMAP = "followSitemap";
 
 	private Map<String, Long> domainLastAccess = Collections.synchronizedMap(new HashMap<String, Long>());
 
@@ -66,7 +70,17 @@ public class MultiSitesSpider extends Spider {
 
 	public static boolean canFollow(Request request) {
 		Boolean extra = (Boolean) request.getExtra(FOLLOW_EXTRA);
-		return extra == null || extra;
+		if (extra != null && !extra) {
+			return false;
+		}
+
+		Integer followCount = (Integer) request.getExtra(FOLLOW_COUNT_EXTRA);
+		if (followCount != null && followCount <= 0) {
+			return false;
+		}
+
+		return true;
+
 	}
 
 	@Override
@@ -102,7 +116,7 @@ public class MultiSitesSpider extends Spider {
 					loadSiteMap(request);
 					return;
 				}
-				processSiteMap(url, robots);
+				processSiteMap(request, url, robots);
 			}
 
 			MultiSitesTask spiderTask = new MultiSitesTask(this, site);
@@ -159,11 +173,20 @@ public class MultiSitesSpider extends Spider {
 		return robots;
 	}
 
-	private synchronized void processSiteMap(URL url, BaseRobotRules robots) {
-		if (!siteMapsLoaded.contains(url.getHost())) {
+	private synchronized void processSiteMap(Request request, URL url, BaseRobotRules robots) {
+		if (isRoot(url) && mayFollowSitemap(request) && !siteMapsLoaded.contains(url.getHost())) {
 			siteMapsLoaded.add(url.getHost());
 			processSitemap(robots, url);
 		}
+	}
+
+	private boolean mayFollowSitemap(Request request) {
+		Boolean followSitemap = (Boolean) request.getExtra(FOLLOW_SITEMAP);
+		return followSitemap != null && followSitemap;
+	}
+
+	private boolean isRoot(URL url) {
+		return (url.getFile().equals("") || url.getFile().equals("/"));
 	}
 
 	private void loadSiteMap(Request request) {

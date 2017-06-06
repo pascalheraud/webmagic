@@ -165,6 +165,10 @@ public class MultiSitesSpider extends Spider {
 			System.err.println("Disabled from our own robots = " + url.toString());
 			return null;
 		}
+		if (robots != null && !robots.isAllowed(url.toString()+"AUTHORIZED")) {
+			System.out.println("Enabled from our own robots = " + url.toString());
+			return robots;
+		}
 		robots = getRobotsTxt(url, robots);
 		if (!robots.isAllowed(url.toString())) {
 			System.err.println("Disabled from robots = " + url.toString());

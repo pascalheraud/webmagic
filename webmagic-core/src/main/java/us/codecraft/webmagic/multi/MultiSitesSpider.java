@@ -63,6 +63,10 @@ public class MultiSitesSpider extends Spider {
 	public void addRobotRules(String domain, BaseRobotRules rules) {
 		this.defaultDomainRobots.put(domain, rules);
 	}
+	
+	public Map<String, BaseRobotRules> getDefaultDomainRobots() {
+		return defaultDomainRobots;
+	}
 
 	public void addSite(String domain, Site site) {
 		this.domainSites.put(domain, site);
@@ -165,7 +169,7 @@ public class MultiSitesSpider extends Spider {
 			System.err.println("Disabled from our own robots = " + url.toString());
 			return null;
 		}
-		if (robots != null && !robots.isAllowed(url.toString()+"AUTHORIZED")) {
+		if (robots != null && robots.isAllowed(url.toString()+"AUTHORIZED")) {
 			System.out.println("Enabled from our own robots = " + url.toString());
 			return robots;
 		}

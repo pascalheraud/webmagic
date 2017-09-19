@@ -45,14 +45,15 @@ public class DatabaseScheduler implements Scheduler {
 
 	@Override
 	public void push(Request request, Task task) {
-		if (existsUrl(request.getUrl())) {
-			return;
-		}
 		String domain;
 		try {
 			domain = new URL(request.getUrl()).getHost();
 		} catch (MalformedURLException e) {
 			throw new RuntimeException(e);
+		}
+
+		if (existsUrl(request.getUrl(), domain)) {
+			return;
 		}
 		Connection cnx = null;
 		try {
@@ -154,7 +155,7 @@ public class DatabaseScheduler implements Scheduler {
 			}
 		}
 	}
-	
+
 	public void disable() {
 		Connection cnx = null;
 		try {
@@ -172,7 +173,7 @@ public class DatabaseScheduler implements Scheduler {
 			closeConnexion(cnx);
 		}
 	}
-	
+
 	public void enable() {
 		Connection cnx = null;
 		try {
@@ -245,7 +246,7 @@ public class DatabaseScheduler implements Scheduler {
 			cnx = dataSource.getConnection();
 			// Poll a request first
 			Request request = getRequest(cnx,
-					"select r.request,priority from webmagic_request r join webmagic_domain d on d.domain=r.domain where not done order by d.lastaccess , priority desc, random() limit 1");
+					"select r.request,priority,url from webmagic_request r join webmagic_domain d on d.domain=r.domain where not done order by d.lastaccess , priority desc, random() limit 1");
 			if (request == null) {
 				return null;
 			}
@@ -307,7 +308,12 @@ public class DatabaseScheduler implements Scheduler {
 				}
 				Request request = unserializeRequest(resultSet.getBytes(1));
 				int priority = resultSet.getInt(2);
+				String url = resultSet.getString(3);
 				request.setPriority(priority);
+				if (!request.getUrl().equals(url)) {
+					logger.warn("Request with different urls :  " + request.getUrl() + " vs " + url);
+					request.setUrl(url);
+				}
 				return request;
 			} finally {
 				closeResultSet(resultSet);
@@ -317,14 +323,18 @@ public class DatabaseScheduler implements Scheduler {
 		}
 	}
 
-	private boolean existsUrl(String url) {
+	private boolean existsUrl(String url, String domain) {
+		String switchToHttp = url.replace("https:", "http:");
+		String switchToHttps = url.replace("http:", "https:");
 		Connection cnx = null;
 		try {
 			cnx = dataSource.getConnection();
 			PreparedStatement select = null;
 			try {
-				select = cnx.prepareStatement("select count(*) from webmagic_request where url = ?");
-				select.setString(1, url);
+				select = cnx.prepareStatement("select count(*) from webmagic_request where domain= ? and (url= ? or url=?)");
+				select.setString(1, domain);
+				select.setString(2, switchToHttp);
+				select.setString(3, switchToHttps);
 				select.executeQuery();
 				ResultSet result = null;
 				try {
